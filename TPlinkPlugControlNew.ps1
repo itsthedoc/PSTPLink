@@ -11,8 +11,15 @@
 #
 ########################################################################################
 
+param (
+[switch]$on,
+[switch]$off,
+[ipaddress]$ip
+)
 
-[ipaddress]$ip = "192.168.1.127"
+$addresses = '192.168.40.61','192.168.40.62'
+#[ipaddress]$ip = "192.168.40.6"
+
 
 [int]$port = 9999 # Should not need to change this as it is hard set
 
@@ -22,10 +29,28 @@
 
 ##### More Examples
 #$Body = '{"system":{"set_relay_state":{"state":1}}}'
+$Body =  '{"system":{"get_sysinfo":null}}'
+
+#$Body
 #$Body = '{"system":{"reboot":{"delay":1}}}'
-$Body = '{"emeter":{"get_realtime":{}}}'
+#$Body = '{"emeter":{"get_realtime":{}}}'
 #$Body = '{"emeter":{"get_daystat":{"month":9,"year":2017}}}'
 #$Body = '{"emeter":{"get_monthstat":{"month":9,"year":2017}}}'
+<#
+if ($on) {
+#Turn On
+$Body = '{"system":{"set_relay_state":{"state":1}}}'
+$body
+}
+
+if ($off) {
+#Turn Off
+$Body = '{"system":{"set_relay_state":{"state":0}}}'
+}
+#>
+#else {
+#$body = '{"system":{"get_sysinfo":null}}'
+#}
 #####
 
 
@@ -118,7 +143,12 @@ param (
 
 
 
+function Run-TPLinkCommand {
 
+    param (
+    [string]$Body,
+    [switch]$Status
+    )
     $Tcpclient = New-Object System.Net.Sockets.TcpClient($IP, $port)
     $Stream = $Tcpclient.GetStream()
 
@@ -155,10 +185,21 @@ param (
         Write-output "No data received back from the plug"
     }else{
      
-        # Now lets store that Encrypted ByteArray so we can clean up the netwrok stack
-        $ReceivedMessage = $Bytesreceived
-        $Obj = ConvertFrom-Json (Decode-ForTPlink $ReceivedMessage)
-        Write-output $Obj
+        # Now lets store that Encrypted ByteArray so we can clean up the n stack
+        
+        $ReceivedMessage = $Bytesreceived 
+        $Obj = ConvertFrom-Json (Decode-ForTPlink $ReceivedMessage) 
+        #$test = Decode-ForTPlink $ReceivedMessage
+        #$test
+        #ConvertFrom-Json $test
+        #$Obj | fl *
+        #$ReceivedMessage
+        if ($status) {
+        return $Obj.system.get_sysinfo.relay_state
+    }
+        else {
+        #Return $Obj | fl *
+        }
     }
     # Clean up the network stack
        
@@ -167,10 +208,34 @@ param (
     $Tcpclient.Dispose()
     $Tcpclient.Close()
     
-   
+   }
+
+foreach ($ip in $addresses) {
+
+#$addresses = '192.168.40.61','192.168.40.62'
 
 
+[ipaddress]$ip = $ip
 
+$status = Run-TPLinkCommand $body -Status
+$status = $status[1]
+
+#write-host "status is...$status"
+
+switch ($status) {
+0 {
+#"true"
+$Body = '{"system":{"set_relay_state":{"state":1}}}'
+Run-TPLinkCommand $Body
+}
+1 {
+#"False"
+$Body = '{"system":{"set_relay_state":{"state":0}}}'
+Run-TPLinkCommand $Body
+}
+}
+
+}
     
 ##############################################################################################################
 #
