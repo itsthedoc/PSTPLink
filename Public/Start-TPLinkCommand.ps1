@@ -48,7 +48,7 @@
         return $Obj.system.get_sysinfo.relay_state
     }
         else {
-        #Return $Obj | fl *
+        Return $Obj
         }
     }
     # Clean up the network stack
